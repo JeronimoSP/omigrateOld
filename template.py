@@ -1,4 +1,4 @@
-/
+import xmlrpc.client
 import rpcconnect
 
 # Test RPC connection using source_system
