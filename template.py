@@ -87,3 +87,5 @@ values = [
     'http_routing',
     'phone_validation'
 ]
+
+source_models = values
