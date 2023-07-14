@@ -2,50 +2,102 @@ import xmlrpc.client
 import rpcconnect
 import openpyxl
 import template
+import pandas as pd
 
 class Migrate:
-    def __init__(self, source_system, target_system, model):
-        self.source_system = source_system
-        self.target_system = target_system
-        self.model = model
+    def __init__(self):
+        self.source_system = None
+        self.target_system = None
 
-    def dataTransfer(self):
-        # Code for data transfer
+    def systemConnect(self, source_connection, target_connection):
+        self.source_system = source_connection
+        self.target_system = target_connection
 
-    def dataExtraction(self):
-        # Code for data extraction
+    def dataTransfer(self, models):
+        for model in models:
+            self.dataExtraction(model)
+            self.dataImport(model)
 
-    def dataTransform(self):
-        # Code for data transformation
+    def dataExtraction(self, model):
+        source_client = self._create_client(self.source_system)
+        records = source_client.execute_kw(self.source_system['db'], source_client.uid, self.source_system['password'],
+                                           model, 'search_read', [[]])
+        df = pd.DataFrame(records)
+        df.to_excel(f"{model}_data.xlsx", index=False)
 
-    def dataImport(self):
-        # Code for data import
+    def dataTransform(self, model, field_type_mapping):
+        # Implement your logic to change field types of a model
+        pass
 
-    def modelCompare(self):
-        # Create a workbook and sheet for the comparison report
-        workbook = openpyxl.Workbook()
-        sheet = workbook.active
+    def dataImport(self, model):
+        target_client = self._create_client(self.target_system)
+        df = pd.read_excel(f"{model}_data.xlsx")
+        records = df.to_dict('records')
+        target_client.execute_kw(self.target_system['db'], target_client.uid, self.target_system['password'],
+                                 model, 'create', [records])
 
-        # Write the headers for the columns
-        sheet['A1'] = 'Source Model'
-        sheet['B1'] = 'Present in Target System'
+    def modelCompare(self, model):
+        source_client = self._create_client(self.source_system)
+        target_client = self._create_client(self.target_system)
 
-        # Iterate over the source models and compare with target system
-        for source_model in source_models:
-            # Check if the source model is present in the target system
-            is_present = self.checkModelPresence(source_model)
+        source_model_info = source_client.execute_kw(self.source_system['db'], source_client.uid,
+                                                     self.source_system['password'], 'ir.model', 'search_read',
+                                                     [[('model', '=', model)]])
+        target_model_info = target_client.execute_kw(self.target_system['db'], target_client.uid,
+                                                     self.target_system['password'], 'ir.model', 'search_read',
+                                                     [[('model', '=', model)]])
 
-            # Write the source model and presence status in the report
-            row = sheet.max_row + 1
-            sheet.cell(row=row, column=1, value=source_model)
-            sheet.cell(row=row, column=2, value=is_present)
+        if source_model_info and target_model_info:
+            # Model exists in both source and target systems
+            source_model_fields = source_client.execute_kw(self.source_system['db'], source_client.uid,
+                                                           self.source_system['password'], 'ir.model.fields',
+                                                           'search_read', [[('model_id', '=', source_model_info[0]['id'])]])
+            target_model_fields = target_client.execute_kw(self.target_system['db'], target_client.uid,
+                                                           self.target_system['password'], 'ir.model.fields',
+                                                           'search_read', [[('model_id', '=', target_model_info[0]['id'])]])
 
-        # Save the comparison report
-        workbook.save('model_comparison_report.xlsx')
+            print("Model exists in both source and target systems.")
+            print("Source model fields:")
+            for field in source_model_fields:
+                print(field['name'])
+            print("Target model fields:")
+            for field in target_model_fields:
+                print(field['name'])
+        else:
+            print("Model does not exist in both source and target systems.")
 
-    def checkModelPresence(self, model):
-        # Code to check if the model is present in the target system
-        # Return True or False based on the presence
+    def _create_client(self, system):
+        url = system['url'] + '/xmlrpc/2/common'
+        common = xmlrpc.client.ServerProxy(url)
+        uid = common.authenticate(system['db'], system['username'], system['password'], {})
+        url = system['url'] + '/xmlrpc/2/object'
+        return xmlrpc.client.ServerProxy(url)
+
+# Example usage
+migrate = Migrate()
+
+source_system_connection = {
+    'url': 'http://source_system_url',
+    'db': 'source_system_db',
+    'username': 'source_system_username',
+    'password': 'source_system_password'
+}
+
+target_system_connection = {
+    'url': 'http://target_system_url',
+    'db': 'target_system_db',
+    'username': 'target_system_username',
+    'password': 'target_system_password'
+}
+
+migrate.systemConnect(source_system_connection, target_system_connection)
+
+models_to_transfer = ['model1', 'model2', 'model3']
+migrate.dataTransfer(models_to_transfer)
+
+model_to_compare = 'model1'
+migrate.modelCompare(model_to_compare)
+
 
 # Test RPC connection using source_system
 source_url = rpcconnect.source_system['url']
