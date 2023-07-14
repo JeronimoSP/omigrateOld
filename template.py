@@ -1,4 +1,4 @@
-values = [
+source_models = [
     'account',
     'account_accountant',
     'documents',
@@ -74,18 +74,7 @@ values = [
     'portal_rating',
     'uom',
     'utm',
-    'web_cohort',
-    'web_editor',
-    'web_enterprise',
-    'web_gantt',
-    'web_grid',
-    'web_kanban_gauge',
-    'web_map',
-    'web_mobile',
-    'web_tour',
     'portal',
     'http_routing',
     'phone_validation'
 ]
-
-source_models = values
