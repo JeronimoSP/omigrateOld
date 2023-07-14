@@ -28,7 +28,7 @@ print("Username:", source_username)
 print("Password:", source_password)
 print("Source System UID:", source_uid)
 
-print("\nTarget System Connection:")
+print("Target System Connection:")
 print("URL:", target_url)
 print("Database:", target_db)
 print("Username:", target_username)
