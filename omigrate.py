@@ -1,5 +1,6 @@
 import xmlrpc.client
 import rpcconnect
+import openpyxl
 
 class Migrate:
     def __init__(self, source_system, target_system, model):
@@ -18,6 +19,32 @@ class Migrate:
 
     def dataImport(self):
         # Code for data import
+
+    def modelCompare(self):
+        # Create a workbook and sheet for the comparison report
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+
+        # Write the headers for the columns
+        sheet['A1'] = 'Source Model'
+        sheet['B1'] = 'Present in Target System'
+
+        # Iterate over the source models and compare with target system
+        for source_model in source_models:
+            # Check if the source model is present in the target system
+            is_present = self.checkModelPresence(source_model)
+
+            # Write the source model and presence status in the report
+            row = sheet.max_row + 1
+            sheet.cell(row=row, column=1, value=source_model)
+            sheet.cell(row=row, column=2, value=is_present)
+
+        # Save the comparison report
+        workbook.save('model_comparison_report.xlsx')
+
+    def checkModelPresence(self, model):
+        # Code to check if the model is present in the target system
+        # Return True or False based on the presence
 
 # Test RPC connection using source_system
 source_url = rpcconnect.source_system['url']
