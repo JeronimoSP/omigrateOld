@@ -2,7 +2,7 @@
 source_system = {
     'url': 'https://arrow-head.qubiq.es',
     'database': 'arrow-head',
-    'username': 'mfueyo@zmcapitalcorp.com'
+    'username': 'mfueyo@zmcapitalcorp.com',
     'password': '4rr0W-Qub1Q'
 }
 
