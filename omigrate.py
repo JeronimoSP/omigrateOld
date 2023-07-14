@@ -81,4 +81,8 @@ print("Username:", target_username)
 print("Password:", target_password)
 print("Target System UID:", target_uid)
 
+# Create a Migrate object and invoke modelCompare method
+migrate = Migrate(source_system, target_system, model)
+migrate.modelCompare(source_models[0])
+
 # Rest of the code...
