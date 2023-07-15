@@ -24,6 +24,7 @@ class Migrate:
                                                   self.target_system['password'], 'ir.module.module', 'search_read',
                                                   [[('name', '=', 'base')]], {'fields': ['latest_version']})
         print("Connected to the target system. Version:", target_version)
+
     def dataTransfer(self, models):
         for model in models:
             self.dataExtraction(model)
@@ -69,13 +70,42 @@ class Migrate:
                                                            'search_read',
                                                            [[('model_id', '=', target_model_info[0]['id'])]])
 
-            print("Model exists in both source and target systems.")
-            print("Source model fields:")
-            for field in source_model_fields:
-                print(field['name'])
-            print("Target model fields:")
-            for field in target_model_fields:
-                print(field['name'])
+            # Create a new workbook
+            workbook = openpyxl.Workbook()
+            sheet = workbook.active
+
+            # Write headers
+            sheet['A1'] = 'Source System'
+            sheet['B1'] = 'Target System'
+            sheet['C1'] = 'is Present'
+            sheet['D1'] = 'is Same Type'
+
+            # Write total records count
+            sheet['A2'] = f"Total Records: {len(source_model_fields)}"
+            sheet['B2'] = f"Total Records: {len(target_model_fields)}"
+
+            # Write unique users count
+            source_users = set(field['create_uid'][1] for field in source_model_fields)
+            target_users = set(field['create_uid'][1] for field in target_model_fields)
+            sheet['A3'] = f"Unique Users: {len(source_users)}"
+            sheet['B3'] = f"Unique Users: {len(target_users)}"
+
+            # Write field details
+            for i, field in enumerate(source_model_fields, start=4):
+                sheet[f'A{i}'] = field['name']
+                target_field = next((f for f in target_model_fields if f['name'] == field['name']), None)
+                if target_field:
+                    sheet[f'B{i}'] = target_field['name']
+                    sheet[f'C{i}'] = True
+                    sheet[f'D{i}'] = field['ttype'] == target_field['ttype']
+                else:
+                    sheet[f'B{i}'] = ''
+                    sheet[f'C{i}'] = False
+                    sheet[f'D{i}'] = False
+
+            # Save the workbook
+            workbook.save(f"{model}_comparison.xlsx")
+            print(f"Comparison report for model '{model}' generated successfully.")
         else:
             print("Model does not exist in both source and target systems.")
 
