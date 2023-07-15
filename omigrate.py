@@ -9,16 +9,27 @@ class Migrate:
         self.source_system = None
         self.target_system = None
 
-    def systemConnect(self, source_connection, target_connection):
-        self.source_system = source_connection
-        self.target_system = target_connection
+    def systemConnect(self, source_system, target_system):
+        self.source_system = source_system
+        self.target_system = target_system
 
+        source_models, source_uid = self._create_client(self.source_system)
+        source_version = source_models.execute_kw(self.source_system['db'], source_uid,
+                                                  self.source_system['password'], 'ir.module.module', 'search_read',
+                                                  [[('name', '=', 'base')]], {'fields': ['latest_version']})
+        print("Connected to the source system. Version:", source_version)
+
+        target_models, target_uid = self._create_client(self.target_system)
+        target_version = target_models.execute_kw(self.target_system['db'], target_uid,
+                                                  self.target_system['password'], 'ir.module.module', 'search_read',
+                                                  [[('name', '=', 'base')]], {'fields': ['latest_version']})
+        print("Connected to the target system. Version:", target_version)
     def dataTransfer(self, models):
         for model in models:
             self.dataExtraction(model)
             self.dataImport(model)
 
-    def dataExtraction(self, model):
+    def dataExtraction(self, model, folder):
         source_client = self._create_client(self.source_system)
         records = source_client.execute_kw(self.source_system['db'], source_client.uid, self.source_system['password'],
                                            model, 'search_read', [[]])
@@ -37,24 +48,26 @@ class Migrate:
                                  model, 'create', [records])
 
     def modelCompare(self, model):
-        source_client = self._create_client(self.source_system)
-        target_client = self._create_client(self.target_system)
+        source_client, source_uid = self._create_client(self.source_system)
+        target_client, target_uid = self._create_client(self.target_system)
 
-        source_model_info = source_client.execute_kw(self.source_system['db'], source_client.uid,
+        source_model_info = source_client.execute_kw(self.source_system['db'], source_uid,
                                                      self.source_system['password'], 'ir.model', 'search_read',
                                                      [[('model', '=', model)]])
-        target_model_info = target_client.execute_kw(self.target_system['db'], target_client.uid,
+        target_model_info = target_client.execute_kw(self.target_system['db'], target_uid,
                                                      self.target_system['password'], 'ir.model', 'search_read',
                                                      [[('model', '=', model)]])
 
         if source_model_info and target_model_info:
             # Model exists in both source and target systems
-            source_model_fields = source_client.execute_kw(self.source_system['db'], source_client.uid,
+            source_model_fields = source_client.execute_kw(self.source_system['db'], source_uid,
                                                            self.source_system['password'], 'ir.model.fields',
-                                                           'search_read', [[('model_id', '=', source_model_info[0]['id'])]])
-            target_model_fields = target_client.execute_kw(self.target_system['db'], target_client.uid,
+                                                           'search_read',
+                                                           [[('model_id', '=', source_model_info[0]['id'])]])
+            target_model_fields = target_client.execute_kw(self.target_system['db'], target_uid,
                                                            self.target_system['password'], 'ir.model.fields',
-                                                           'search_read', [[('model_id', '=', target_model_info[0]['id'])]])
+                                                           'search_read',
+                                                           [[('model_id', '=', target_model_info[0]['id'])]])
 
             print("Model exists in both source and target systems.")
             print("Source model fields:")
@@ -70,21 +83,24 @@ class Migrate:
         url = system['url'] + '/xmlrpc/2/common'
         common = xmlrpc.client.ServerProxy(url)
         uid = common.authenticate(system['db'], system['username'], system['password'], {})
+
         url = system['url'] + '/xmlrpc/2/object'
-        return xmlrpc.client.ServerProxy(url)
+        models = xmlrpc.client.ServerProxy(url)
+        return models, uid
 
 # Example usage
+
 migrate = Migrate()
 
-source_system_connection = rpcconnect.source_system
-target_system_connection = rpcconnect.target_system
+migrate.source_system = rpcconnect.source_system
+migrate.target_system = rpcconnect.target_system
 
-migrate.systemConnect(source_system_connection, target_system_connection)
+print(migrate.source_system)
+print(migrate.target_system)
 
-models_to_transfer = ['model1', 'model2', 'model3']
-migrate.dataTransfer(models_to_transfer)
+migrate.systemConnect(migrate.source_system, migrate.target_system)
 
-model_to_compare = 'model1'
+model_to_compare = 'res.partner'
 migrate.modelCompare(model_to_compare)
 
 # Rest of the code...
